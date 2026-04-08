@@ -36,10 +36,10 @@ namespace QuantConnect.Brokerages.Fidelity
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FidelityBrokerageModel"/> class.
-        /// BrokerageLink / 401k accounts are cash accounts.
+        /// Standard Fidelity brokerage accounts default to margin. BrokerageLink / 401k accounts should pass <see cref="AccountType.Cash"/>.
         /// </summary>
-        /// <param name="accountType">The account type (default Cash for BrokerageLink)</param>
-        public FidelityBrokerageModel(AccountType accountType = AccountType.Cash) : base(accountType)
+        /// <param name="accountType">The account type (default Margin for standard brokerage accounts)</param>
+        public FidelityBrokerageModel(AccountType accountType = AccountType.Margin) : base(accountType)
         {
         }
 
@@ -111,11 +111,11 @@ namespace QuantConnect.Brokerages.Fidelity
         }
 
         /// <summary>
-        /// Fidelity: no leverage for BrokerageLink/401k (cash account)
+        /// Fidelity BrokerageLink accounts are cash-only. Standard brokerage accounts use LEAN's default equity leverage.
         /// </summary>
         public override decimal GetLeverage(Security security)
         {
-            return 1m;
+            return AccountType == AccountType.Cash ? 1m : base.GetLeverage(security);
         }
 
         /// <summary>

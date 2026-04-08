@@ -30,12 +30,4 @@
     <ProjectReference Include="../../Lean/Configuration/QuantConnect.Configuration.csproj" />
     <ProjectReference Include="../../Lean/Logging/QuantConnect.Logging.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <None Include="fidelity_sidecar.py">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="requirements.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
 </Project>

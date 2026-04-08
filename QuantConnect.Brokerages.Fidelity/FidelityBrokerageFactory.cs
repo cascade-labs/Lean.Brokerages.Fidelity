@@ -18,6 +18,8 @@ namespace QuantConnect.Brokerages.Fidelity
     /// Configuration (environment variables or lean config):
     ///   fidelity-sidecar-url   - URL of the Python sidecar (default: http://127.0.0.1:5198)
     ///   fidelity-account       - Fidelity account number (Z-prefixed for BrokerageLink)
+    ///   fidelity-account-type  - Optional override: Cash or Margin
+    ///   fidelity-http-timeout-seconds - Optional sidecar HTTP timeout override (default: 120)
     /// </summary>
     public class FidelityBrokerageFactory : BrokerageFactory
     {
@@ -39,7 +41,9 @@ namespace QuantConnect.Brokerages.Fidelity
                 return new Dictionary<string, string>
                 {
                     { "fidelity-sidecar-url", Config.Get("fidelity-sidecar-url", "http://127.0.0.1:5198") },
-                    { "fidelity-account", Config.Get("fidelity-account", "") }
+                    { "fidelity-account", Config.Get("fidelity-account", "") },
+                    { "fidelity-account-type", Config.Get("fidelity-account-type", "") },
+                    { "fidelity-http-timeout-seconds", Config.Get("fidelity-http-timeout-seconds", "120") }
                 };
             }
         }
@@ -49,7 +53,9 @@ namespace QuantConnect.Brokerages.Fidelity
         /// </summary>
         public override IBrokerageModel GetBrokerageModel(IOrderProvider orderProvider)
         {
-            return new FidelityBrokerageModel();
+            var account = Config.Get("fidelity-account", "");
+            var configuredAccountType = Config.Get("fidelity-account-type", "");
+            return new FidelityBrokerageModel(GetAccountType(account, configuredAccountType));
         }
 
         /// <summary>
@@ -61,10 +67,16 @@ namespace QuantConnect.Brokerages.Fidelity
 
             var sidecarUrl = Read<string>(job.BrokerageData, "fidelity-sidecar-url", errors);
             var account = Read<string>(job.BrokerageData, "fidelity-account", errors);
+            var httpTimeoutSeconds = Read<int>(job.BrokerageData, "fidelity-http-timeout-seconds", errors);
 
             if (string.IsNullOrWhiteSpace(sidecarUrl))
             {
                 sidecarUrl = "http://127.0.0.1:5198";
+            }
+
+            if (httpTimeoutSeconds <= 0)
+            {
+                httpTimeoutSeconds = 120;
             }
 
             if (errors.Count > 0)
@@ -73,7 +85,7 @@ namespace QuantConnect.Brokerages.Fidelity
                     "FidelityBrokerageFactory: " + string.Join("; ", errors));
             }
 
-            return new FidelityBrokerage(algorithm, sidecarUrl, account);
+            return new FidelityBrokerage(algorithm, sidecarUrl, account, httpTimeoutSeconds);
         }
 
         /// <summary>
@@ -81,6 +93,23 @@ namespace QuantConnect.Brokerages.Fidelity
         /// </summary>
         public override void Dispose()
         {
+        }
+
+        private static AccountType GetAccountType(string account, string configuredAccountType)
+        {
+            if (!string.IsNullOrWhiteSpace(configuredAccountType)
+                && Enum.TryParse(configuredAccountType, true, out AccountType accountType))
+            {
+                return accountType;
+            }
+
+            return IsBrokerageLinkAccount(account) ? AccountType.Cash : AccountType.Margin;
+        }
+
+        private static bool IsBrokerageLinkAccount(string account)
+        {
+            return !string.IsNullOrWhiteSpace(account)
+                && account.Trim().StartsWith("Z", StringComparison.OrdinalIgnoreCase);
         }
     }
 }
